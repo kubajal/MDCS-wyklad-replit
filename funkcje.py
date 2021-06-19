@@ -7,14 +7,10 @@ import csv
 import random
 import time
 
-stan_zdrowy = "Zdrowy"
-stan_chory = "Chory"
-stan_ozdrowialy = "Ozdrowialy"
-
-def symuluj(koniec_symulacji, graf, gamma, beta):
+def symuluj(koniec_symulacji, graf, gamma, beta, poczatkowa_liczba_chorych=1):
   liczba_wezlow = len(graf.keys())
-  indeksy_chorych = random.sample(range(0, liczba_wezlow), 10)
-  stary_stan = {i: (stan_chory if(i in indeksy_chorych) else stan_zdrowy) for i in range(0, liczba_wezlow)}
+  indeksy_chorych = random.sample(range(0, liczba_wezlow), poczatkowa_liczba_chorych)
+  stary_stan = {i: ("Chory" if(i in indeksy_chorych) else "Zdrowy") for i in range(0, liczba_wezlow)}
   
   stary_stan['numer'] = 0
   kroki = [stary_stan]
@@ -25,31 +21,29 @@ def symuluj(koniec_symulacji, graf, gamma, beta):
     nowy_stan = {}
     nowy_stan["numer"] = t
     for wezel in graf:
-      if(stary_stan[wezel] == stan_chory):
-        if(random.random() < gamma):
-          nowy_stan[wezel] = stan_ozdrowialy
+
+      if stary_stan[wezel] == "Chory":
+        if random.random() < gamma:
+          nowy_stan[wezel] = "Ozdrowialy"
         else:
-          nowy_stan[wezel] = stan_chory
-      elif(stary_stan[wezel] == stan_zdrowy):
-        # chorzy_sasiedzi = [sasiad for sasiad in graf[wezel] if stary_stan[sasiad] == stan_chory]
-        # liczba_chorych_sasiadow = len(chorzy_sasiedzi)
-        # prog = (1-(1-beta)**liczba_chorych_sasiadow)
-        # if(random.random() < prog):
-        #   nowy_stan[wezel] = stan_chory
-        # else:
-        #   nowy_stan[wezel] = stan_zdrowy
+          nowy_stan[wezel] = "Chory"
+      
+      elif stary_stan[wezel] == "Zdrowy":
         for sasiad in graf[wezel]:
-          if(stary_stan[sasiad] == stan_chory and random.random() < beta):
-            nowy_stan[wezel] = stan_chory
+          if stary_stan[sasiad] == "Chory" and random.random() < beta:
+            nowy_stan[wezel] = "Chory"
         if wezel not in nowy_stan:
-          nowy_stan[wezel] = stan_zdrowy
-      elif(stary_stan[wezel] == stan_ozdrowialy):
-          nowy_stan[wezel] = stan_ozdrowialy
+          nowy_stan[wezel] = "zdrowy"
+      
+      elif stary_stan[wezel] == "Ozdrowialy":
+          nowy_stan[wezel] = "Ozdrowialy"
+      
       else:
         raise Exception("cos poszlo bardzo zle")
-    chore_osoby_t = [wezel for wezel in nowy_stan if nowy_stan[wezel] == stan_chory]
+    
+    chore_osoby_t = [wezel for wezel in nowy_stan if nowy_stan[wezel] == "Chory"]
     liczba_chorych_t = len(chore_osoby_t)
-    ozdrowiale_osoby_t = [wezel for wezel in nowy_stan if nowy_stan[wezel] == stan_ozdrowialy]
+    ozdrowiale_osoby_t = [wezel for wezel in nowy_stan if nowy_stan[wezel] == "Ozdrowialy"]
     liczba_ozdrowialych_t = len(ozdrowiale_osoby_t)
     # print("S:I:R (t=" + str(t) + "): " + str(100-liczba_chorych_t-liczba_ozdrowialych_t) + ":" + str(liczba_chorych_t) + ":" + str(liczba_ozdrowialych_t))
     
@@ -64,7 +58,7 @@ def symuluj(koniec_symulacji, graf, gamma, beta):
     "kroki": kroki
   }
 
-def wrapper_symulacji(gamma=0.1, beta=0.02, koniec_symulacji=400, liczba_symulacji=100, plik_wejsciowy="krawedzie.csv", plik_wyjsciowy="wyjscie.csv"):
+def wrapper_symulacji(gamma=0.1, beta=0.02, poczatkowa_liczba_chorych=1, koniec_symulacji=400, liczba_symulacji=100, plik_wejsciowy="krawedzie.csv", plik_wyjsciowy="wyjscie.csv"):
 
   graf = wczytaj_graf(plik_wejsciowy)
 
@@ -77,7 +71,7 @@ def wrapper_symulacji(gamma=0.1, beta=0.02, koniec_symulacji=400, liczba_symulac
 
   for i in range(0, liczba_symulacji):
     start = time.time()
-    symulacja = symuluj(koniec_symulacji, graf, gamma, beta)
+    symulacja = symuluj(koniec_symulacji, graf, gamma, beta, poczatkowa_liczba_chorych)
     end = time.time()
     print("czas wykonania symulacji "+ str(i)+": " + str(end-start) + "s")
     wynik["chorzy"] = wynik["chorzy"] + symulacja["chorzy"]
@@ -115,7 +109,12 @@ def wczytaj_graf(krawedzie):
 
 def konwertuj_do_networkX(graf):
   G = nx.DiGraph()
-  wezly = graf.keys()
+  stopnie = [[wezel, len(graf[wezel])] for wezel in graf]
+  def klucz(element):
+    [x, y] = element
+    return y
+  posortowane = sorted(stopnie, key=klucz)
+  wezly = [wezel for [wezel, stopien] in posortowane]
   krawedzie = [(zrodlo, cel) for (zrodlo, cele) in graf.items() for cel in cele]
   for w in wezly:
     G.add_node(w)
@@ -141,42 +140,45 @@ def konwertuj_slownik_do_networkX(graf = {'1': ['1']}):
       G.add_edge(zrodlo, cel)
   return G
   
-def animuj(graf, kroki, plik_wyjsciowy):
-  print(len(kroki))
+def animuj(graf, wynik_symulacji, plik_wyjsciowy):
+  n = 10
+  # wybierz co n-ta klatke symulacji
+  # aby szybciej generowal sie GIF
+  kroki = wynik_symulacji["kroki"][1::n]
+  gamma = wynik_symulacji["gamma"]
+  nazwa = wynik_symulacji["nazwa"]
+  beta = wynik_symulacji["beta"]
+  
   print("Konwertuje do networkX")
   G = konwertuj_do_networkX(graf)
   print("Obliczam pozycje")
-  position = nx.spring_layout(G, iterations=10)
+  position = nx.circular_layout(G, scale=10)
   figure, ax = plt.subplots(figsize=(10,8))
   def rysuj_krok(krok):
     ax.clear()
-    # krok = k.copy()
-    # print(krok)
     numer = krok["numer"]
     kolory = []
     wezly_id = []
     for wezel in graf:
       if(wezel != "numer"):
         wezly_id = wezly_id + [wezel]
-        if(krok[wezel] == stan_chory):
+        if(krok[wezel] == "Chory"):
           kolory = kolory + ["red"]
-        elif(krok[wezel] == stan_zdrowy):
+        elif(krok[wezel] == "Zdrowy"):
           kolory = kolory + ["green"]
-        elif(krok[wezel] == stan_ozdrowialy):
+        elif(krok[wezel] == "Ozdrowaly"):
           kolory = kolory + ["blue"]
         else:
           raise Exception("cos poszlo bardzo zle")
-    ax.set_title(f"numer kroku: {numer}\n")
     nx.draw_networkx(G, position, nodelist=wezly_id, node_color=kolory)
-  
-  # print("Rysuje animacje")
-  # for krok in kroki:
-  #   rysuj_krok(krok)
+    chorzy = wynik_symulacji["chorzy"][numer]
+    ozdrowiali = wynik_symulacji["ozdrowiali"][numer]
+    ax.set_title(f"{nazwa}, gamma: {gamma}, beta={beta}\nnumer kroku: {numer}, chorzy: {chorzy}, ozdrowiali: {ozdrowiali}")
   print("Przygotowuje animacje")
-  ani = animation.FuncAnimation(figure, rysuj_krok, kroki, repeat=False)
-  print("Zapisuje do pliku .gif")
-  ani.save('gify/' + plik_wyjsciowy, writer='ffmpeg')
-  #plt.show()
+  ani = animation.FuncAnimation(figure, rysuj_krok, kroki, interval=1000, repeat=False)
+  print("Zapisuje do gify/" + plik_wyjsciowy + " skonczone")
+  ani.save('gify/' + plik_wyjsciowy)
+  print("Zapisywanie do gify/" + plik_wyjsciowy + " skonczone")
 
 def generuj_graf_erdos(plik_wyjsciowy="wejscie/erdos.csv", n=100, sredni_stopien=10):
   p = float(sredni_stopien)/n
@@ -209,7 +211,6 @@ def generuj_graf_barabasi(plik_wyjsciowy="wejscie/barabasi.csv", n=100, sredni_s
   plt.clf()
 
 def generuj_graf_Watts_Strogatz(plik_wyjsciowy="wejscie/WattsStrogatz.csv", n=100, sredni_stopien=10, polaczenia_dalekie=0.1):
-  m = sredni_stopien // 2
   graf = nx.watts_strogatz_graph(n, sredni_stopien, polaczenia_dalekie)
   while(not nx.is_connected(graf)):
     graf = nx.watts_strogatz_graph(n, sredni_stopien, polaczenia_dalekie)
@@ -228,20 +229,20 @@ def rysuj_wykresy_chorych(nazwa, opis):
     dane = pd.read_csv(plik, delimiter=",")
     dane_zgroupowane = dane.groupby("nr_symulacji")
     dane_zgroupowane["chorzy"].value_counts()
+    plt.rcParams['font.size'] = '16'
     fig1, ax1 = plt.subplots(figsize=(8,6))
     ax1.set_title(nazwa + ": chorzy\n" + opis)
     for grupa in dane_zgroupowane.groups:
       symulacja = dane_zgroupowane.get_group(grupa)
       symulacja.plot(x="iteracje", y="chorzy", legend=False, ax=ax1, alpha=0.1, color="black")
     # df1.plot(kind="kde", ax=ax)
-    ax1.set_ylabel("chorzy")
+    ax1.set_ylabel("liczba chorych")
     plt.savefig(plik + "-chorzy.png")
     fig2, ax2 = plt.subplots(figsize=(8,6))
-    ax2.set_title(nazwa + ": chorzy + ozdrowiali\n" + opis)
+    ax2.set_title(nazwa + ": ozdrowiali\n" + opis)
     for grupa in dane_zgroupowane.groups:
       symulacja = dane_zgroupowane.get_group(grupa)
-      symulacja["chorzy + ozdrowiali"] = symulacja["chorzy"] + symulacja["ozdrowiali"]
-      symulacja.plot(x="iteracje", y="chorzy + ozdrowiali", legend=False, ax=ax2, alpha=0.1, color="black")
+      symulacja.plot(x="iteracje", y="ozdrowiali", legend=False, ax=ax2, alpha=0.1, color="black")
     # df1.plot(kind="kde", ax=ax)
-    ax2.set_ylabel("chorzy + ozdrowiali")
-    plt.savefig(plik + "-chorzy_i_ozdrowiali.png")
+    ax2.set_ylabel("liczba ozdrowiałych")
+    plt.savefig(plik + "-ozdrowiali.png")

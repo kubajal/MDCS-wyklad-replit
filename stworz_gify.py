@@ -1,16 +1,21 @@
 from funkcje import *
 
 konfiguracja = [
-  ["wejscie/barabasi_100.csv", "barabasi"],
-  ["wejscie/erdos_100.csv", "erdos"]
+  ["wejscie/barabasi_40.csv", "siec bezskalowa - 40 wezlow"],
+  ["wejscie/erdos_40.csv", "siec losowa - 40 wezlow"]
 ]
 
-for symulacja in konfiguracja:
+for symulacja in konfiguracja:  
   print(symulacja)
   plik_wejsciowy=symulacja[0]
   nazwa=symulacja[1]
   graf = wczytaj_graf(plik_wejsciowy)
-  wynik = symuluj(200, graf, gamma=0.1, beta=0.02)
-  kroki = wynik["kroki"]
-  animuj(graf, kroki, plik_wyjsciowy=nazwa + ".gif")
+  gamma = 0.1
+  beta = 0.03
+  wynik = symuluj(50, graf, gamma=gamma, beta=beta, poczatkowa_liczba_chorych=4)
+  wynik["gamma"] = gamma
+  wynik["beta"] = beta
+  wynik["nazwa"] = nazwa
+  animuj(graf, wynik, plik_wyjsciowy=nazwa + ".gif")
+  
   # rysuj_wykresy_chorych(symulacja[2], "100 wezlow, sredni stopien: 10")
