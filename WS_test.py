@@ -1,11 +1,12 @@
 from funkcje import *
 
-konfiguracja = [
-  ["wejscie/.csv", "wyjscie/barabasi_wynik.csv", "barabasi"],
-  ["wejscie/erdos.csv", "wyjscie/erdos_wynik.csv", "erdos"]
-]
+generuj_graf_Watts_Strogatz(plik_wyjsciowy="wejscie/WattsStrogatz_no_lockdown.csv", n=100, sredni_stopien=10, polaczenia_dalekie=0.1)
+generuj_graf_Watts_Strogatz(plik_wyjsciowy="wejscie/WattsStrogatz_lockdown.csv", n=100, sredni_stopien=10, polaczenia_dalekie=0)
 
-generuj_graf_erdos(plik_wyjsciowy="wejscie/erdos_100.csv", n=100, sredni_stopien=8)
+konfiguracja = [
+  ["wejscie/WattsStrogatz_no_lockdown.csv", "wyjscie/WattsStrogatz_no_lockdown_wynik.csv", "WattsStrogatz_no_lockdown"],
+  ["wejscie/WattsStrogatz_lockdown.csv", "wyjscie/WattsStrogatz_lockdown_wynik.csv", "WattsStrogatz_lockdown"]
+]
 
 for symulacja in konfiguracja:
   print(symulacja)

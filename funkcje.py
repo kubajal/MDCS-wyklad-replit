@@ -16,6 +16,7 @@ def symuluj(koniec_symulacji, graf, gamma, beta):
   indeksy_chorych = random.sample(range(0, liczba_wezlow), 10)
   stary_stan = {i: (stan_chory if(i in indeksy_chorych) else stan_zdrowy) for i in range(0, liczba_wezlow)}
   
+  stary_stan['numer'] = 0
   kroki = [stary_stan]
   chorzy = []
   ozdrowiali = []
@@ -167,13 +168,14 @@ def animuj(graf, kroki, plik_wyjsciowy):
           raise Exception("cos poszlo bardzo zle")
     ax.set_title(f"numer kroku: {numer}\n")
     nx.draw_networkx(G, position, nodelist=wezly_id, node_color=kolory)
-    plt.savefig("gify/" + plik_wyjsciowy)
   
   # print("Rysuje animacje")
   # for krok in kroki:
   #   rysuj_krok(krok)
+  print("Przygotowuje animacje")
   ani = animation.FuncAnimation(figure, rysuj_krok, kroki, repeat=False)
-  ani.save('./symulacja.gif', writer='imagemagick')
+  print("Zapisuje do pliku .gif")
+  ani.save('gify/' + plik_wyjsciowy, writer='ffmpeg')
   #plt.show()
 
 def generuj_graf_erdos(plik_wyjsciowy="wejscie/erdos.csv", n=100, sredni_stopien=10):
