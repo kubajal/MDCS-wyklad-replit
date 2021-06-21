@@ -1,5 +1,8 @@
 from funkcje import *
 
+# Aby uruchomić ten skrypt wybierz 'shell' w  prawym dolnym rogu i wpisz 'python losowa_vs_bezskalowa.py'.
+# Zapoznaj się ponadto z 'funkcje.py'.
+
 generuj_graf_barabasi(plik_wyjsciowy="wejscie/barabasi.csv", n=1000, sredni_stopien=6)
 generuj_graf_erdos(plik_wyjsciowy="wejscie/erdos.csv", n=1000, sredni_stopien=6)
 

@@ -1,5 +1,8 @@
 from funkcje import *
 
+# Aby uruchomić ten skrypt wybierz 'shell' w  prawym dolnym rogu i wpisz 'python stworz_gify.py'.
+# Zapoznaj się ponadto z 'funkcje.py'.
+
 konfiguracja = [
   ["wejscie/barabasi_40.csv", "siec bezskalowa - 40 wezlow"],
   ["wejscie/erdos_40.csv", "siec losowa - 40 wezlow"]

@@ -1,5 +1,8 @@
 from funkcje import * 
 
+# Aby uruchomić ten skrypt wybierz 'shell' w  prawym dolnym rogu i wpisz 'python male_swiaty.py'.
+# Zapoznaj się ponadto z 'funkcje.py'.
+
 generuj_graf_Watts_Strogatz(plik_wyjsciowy="wejscie/WattsStrogatz_no_lockdown.csv", n=1000, sredni_stopien=10, polaczenia_dalekie=0.1)
 
 generuj_graf_Watts_Strogatz(plik_wyjsciowy="wejscie/WattsStrogatz_half_lockdown.csv", n=1000, sredni_stopien=10, polaczenia_dalekie=0.01)

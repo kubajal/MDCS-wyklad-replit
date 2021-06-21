@@ -7,27 +7,49 @@ import csv
 import random
 import time
 
-def symuluj(koniec_symulacji, graf, gamma, beta, poczatkowa_liczba_chorych=1):
+# Funkcja wykonująca symulację rozchodzenia się epidemii na podanym grafie.
+# dlugosc_symulacji - ile kroków ma mieć symulacja
+# graf - słownik reprezentujący graf
+# gamma i beta - współczynniki rozchodzenia się epidemii
+# poczatkowa_liczba_chorych - ile wierzchołków w grafie ma być na początek zakażonych
+def symuluj(dlugosc_symulacji, graf, gamma, beta, poczatkowa_liczba_chorych=1):
+
+  # obliczamy ile jest wierzchołków w grafie
   liczba_wezlow = len(graf.keys())
+
+  # losujemy numery chorych wierzchołków (będzie ich tyle ile wynosi poczatkowa_liczba_chorych)
   indeksy_chorych = random.sample(range(0, liczba_wezlow), poczatkowa_liczba_chorych)
-  stary_stan = {i: ("Chory" if(i in indeksy_chorych) else "Zdrowy") for i in range(0, liczba_wezlow)}
+
+  # będziemy przechowywać stan symulacji jako słownik węzeł->status (czyli każdy węzeł jest na razie albo 'chory' albo 'zdrowy')
+  stan_poczatkowy = {i: ("Chory" if(i in indeksy_chorych) else "Zdrowy") for i in range(0, liczba_wezlow)}
   
-  stary_stan['numer'] = 0
-  kroki = [stary_stan]
+  # dodatkowo zapisujemy numer kroku symmulacji
+  stan_poczatkowy['numer'] = 0
+
+  # dodajemy stan_poczatkowy do listy krokow symulacji
+  kroki = [stan_poczatkowy]
   chorzy = []
   ozdrowiali = []
   
-  for t in range(0, koniec_symulacji):
+  # zaczynamy symulację...
+  stary_stan = stan_poczatkowy
+  for t in range(0, dlugosc_symulacji):
+    
+    # przygotowujemy słownik do przechowywania stanu wszystkich wierzchołków na koniec kroku symulacji
     nowy_stan = {}
     nowy_stan["numer"] = t
+
+    # przechodzimy przez wszystkie węzły i obliczamy ich stan na koniec kroku symulacji
     for wezel in graf:
 
+      # jeśli węzeł jest chory...
       if stary_stan[wezel] == "Chory":
         if random.random() < gamma:
           nowy_stan[wezel] = "Ozdrowialy"
         else:
           nowy_stan[wezel] = "Chory"
-      
+
+      # jeśli węzeł jest zdrowy...      
       elif stary_stan[wezel] == "Zdrowy":
         for sasiad in graf[wezel]:
           if stary_stan[sasiad] == "Chory" and random.random() < beta:
@@ -35,33 +57,51 @@ def symuluj(koniec_symulacji, graf, gamma, beta, poczatkowa_liczba_chorych=1):
         if wezel not in nowy_stan:
           nowy_stan[wezel] = "zdrowy"
       
+      # jeśli węzel jest ozdrowiały
       elif stary_stan[wezel] == "Ozdrowialy":
           nowy_stan[wezel] = "Ozdrowialy"
       
+      # nie ma więcej stanów niż 'chory', 'zdrowy' i 'ozdrowialy', więc jeśli tu doszliśmy to coś poszło źle
       else:
         raise Exception("cos poszlo bardzo zle")
     
+    # wybieramy osoby chore na koniec kroku symulacji
     chore_osoby_t = [wezel for wezel in nowy_stan if nowy_stan[wezel] == "Chory"]
-    liczba_chorych_t = len(chore_osoby_t)
-    ozdrowiale_osoby_t = [wezel for wezel in nowy_stan if nowy_stan[wezel] == "Ozdrowialy"]
-    liczba_ozdrowialych_t = len(ozdrowiale_osoby_t)
-    # print("S:I:R (t=" + str(t) + "): " + str(100-liczba_chorych_t-liczba_ozdrowialych_t) + ":" + str(liczba_chorych_t) + ":" + str(liczba_ozdrowialych_t))
     
+    # obliczamy liczbę chorych na koniec kroku symulacji
+    liczba_chorych_t = len(chore_osoby_t)
+
+    # wybieramy osoby ozdrowiale na koniec kroku symulacji
+    ozdrowiale_osoby_t = [wezel for wezel in nowy_stan if nowy_stan[wezel] == "Ozdrowialy"]
+
+    # obliczamy liczbę ozdrowiałych na koniec kroku symulacji
+    liczba_ozdrowialych_t = len(ozdrowiale_osoby_t)
+    
+    # zapisujemy stan, liczbę chorych i liczbę ozdrowiałych do odpowiednich tablic, które zwrócimy na koniec symulacji
     kroki = kroki + [nowy_stan]
     chorzy = chorzy + [liczba_chorych_t]
     ozdrowiali = ozdrowiali + [liczba_ozdrowialych_t]
     stary_stan = nowy_stan
 
+  # zwracmy wynik symulacji jako słownik, pod odpowiednimi kluczami są tablice z uzyskanymi w każdym kroku liczbami chorych, liczbami zdrowych i stanami wierzchołków
   return {
     "chorzy": chorzy,
     "ozdrowiali": ozdrowiali,
     "kroki": kroki
   }
 
-def wrapper_symulacji(gamma=0.1, beta=0.02, poczatkowa_liczba_chorych=1, koniec_symulacji=400, liczba_symulacji=100, plik_wejsciowy="krawedzie.csv", plik_wyjsciowy="wyjscie.csv"):
+# Funkcja do wykonania podanej liczby symulacji na grafie.
+# gamma i beta - parametry rozchodzenia się symulacji
+# poczatkowa_liczba_chorych - ile wierzchołków ma być zakażonych na początku symulacji
+# dlugosc_symulacji - ile kroków ma mieć symulacja
+# liczba_symulacji - ile przeprowadzić symulacji (im więcej tym dokładniejsze wyniki uzyskamy, ale symulowanie będzie dłużej trwało)
+# plik_wejsciowy i plik_wyjsciowy - nazwy odpowiednich plików CSV (każda linia zawiera jedną krawędź)
+def wrapper_symulacji(gamma=0.1, beta=0.02, poczatkowa_liczba_chorych=1, dlugosc_symulacji=400, liczba_symulacji=100, plik_wejsciowy="krawedzie.csv", plik_wyjsciowy="wyjscie.csv"):
 
+  # wczytujemy graf z pliku CSV
   graf = wczytaj_graf(plik_wejsciowy)
 
+  # przygotowujemy słownik do wyjścia
   wynik = {
     "chorzy": [],
     "ozdrowiali": [],
@@ -69,44 +109,61 @@ def wrapper_symulacji(gamma=0.1, beta=0.02, poczatkowa_liczba_chorych=1, koniec_
     "nr_symulacji": []
   }
 
+  # pętla do wywoływania symulacji
   for i in range(0, liczba_symulacji):
+
+    # zapisujemy czas rozpoczęcia symulacji
     start = time.time()
-    symulacja = symuluj(koniec_symulacji, graf, gamma, beta, poczatkowa_liczba_chorych)
+
+    # wykonujemy symulację
+    symulacja = symuluj(dlugosc_symulacji, graf, gamma, beta, poczatkowa_liczba_chorych)
+    
+    # zapisujemy czas zakończenia symulacji
     end = time.time()
+
     print("czas wykonania symulacji "+ str(i)+": " + str(end-start) + "s")
+
+    # łączymy słownik, który uzyskaliśmy na wyjściu funkcji symuluj() ze słownikiem, do którego zbiorczo zapisujemy wszystkie wyniki
     wynik["chorzy"] = wynik["chorzy"] + symulacja["chorzy"]
     wynik["ozdrowiali"] = wynik["ozdrowiali"] + symulacja["ozdrowiali"]
-    wynik["iteracje"] = wynik["iteracje"] + [j for j in range(0, koniec_symulacji)]
-    wynik["nr_symulacji"] = wynik["nr_symulacji"] + [i for j in range(0, koniec_symulacji)]
+    wynik["iteracje"] = wynik["iteracje"] + [j for j in range(0, dlugosc_symulacji)]
+    wynik["nr_symulacji"] = wynik["nr_symulacji"] + [i for j in range(0, dlugosc_symulacji)]
 
+  # wynik wszystkich symulacji zapisujemy do plik_wyjsciowy w formacie CSV (w każdym wierszu podajemy:
+  # - liczbę chorych
+  # - liczbę ozdrowiałych
+  # - numer kroku (iteracji)
+  # - numer symulacji
   with open(plik_wyjsciowy, 'w') as plik:
     plik.write("chorzy,ozdrowiali,iteracje,nr_symulacji\n")
     tekst=""
-    for i in range(0, koniec_symulacji * liczba_symulacji):
+    for i in range(0, dlugosc_symulacji * liczba_symulacji):
       tekst = tekst + str(wynik["chorzy"][i])
       tekst = tekst + "," + str(wynik["ozdrowiali"][i])
       tekst = tekst + "," + str(wynik["iteracje"][i])
       tekst = tekst + "," + str(wynik["nr_symulacji"][i]) + '\n'
     plik.write(tekst)
 
+# Funkcja pomocnicza do wczytywania grafu z pliku CSV (w każdym wierszu jest jedna krawędź)
 def wczytaj_graf(krawedzie):
   with open(krawedzie, newline='') as plik:
     reader = csv.reader(plik, delimiter=',')
     graf = {}
     for tekst in reader:
-      poczatek = int(tekst[0])
-      koniec = int(tekst[1])
-      if(poczatek not in graf):
-        graf[poczatek] = [koniec]
+      poczatek_krawedzi = int(tekst[0])
+      koniec_krawedzzi = int(tekst[1])
+      if(poczatek_krawedzi not in graf):
+        graf[poczatek_krawedzi] = [koniec_krawedzzi]
       else:
-        graf[poczatek] = graf[poczatek] + [koniec]
-      if(koniec not in graf):
-        graf[koniec] = [poczatek]
+        graf[poczatek_krawedzi] = graf[poczatek_krawedzi] + [koniec_krawedzzi]
+      if(koniec_krawedzzi not in graf):
+        graf[koniec_krawedzzi] = [poczatek_krawedzi]
       else:
-        graf[koniec] = graf[koniec] + [poczatek]
+        graf[koniec_krawedzzi] = graf[koniec_krawedzzi] + [poczatek_krawedzi]
 
   return graf
 
+# Funkcja pomocnicza potrzebna do rysowania grafu. Nie musisz wiedzieć co ona robi.
 def konwertuj_do_networkX(graf):
   G = nx.DiGraph()
   stopnie = [[wezel, len(graf[wezel])] for wezel in graf]
@@ -122,11 +179,13 @@ def konwertuj_do_networkX(graf):
     G.add_edge(e[0], e[1])
   return G
 
+# Funkcja pomocnicza potrzebna do rysowania grafu. Nie musisz wiedzieć co ona robi.
 def rysuj_graf(self, G):
   pos = nx.spectral_layout(G)
   nx.draw_networkx(G, pos)
   plt.show()
 
+# Funkcja pomocnicza potrzebna do rysowania grafu. Nie musisz wiedzieć co ona robi.
 def konwertuj_slownik_do_networkX(graf = {'1': ['1']}):
   G = nx.DiGraph()
   wezly_zrodla = set(graf.keys())
@@ -140,6 +199,7 @@ def konwertuj_slownik_do_networkX(graf = {'1': ['1']}):
       G.add_edge(zrodlo, cel)
   return G
   
+# Funkcja pomocnicza potrzebna do rysowania plików GIF. Nie musisz wiedzieć co ona robi.
 def animuj(graf, wynik_symulacji, plik_wyjsciowy):
   n = 10
   # wybierz co n-ta klatke symulacji
@@ -180,6 +240,7 @@ def animuj(graf, wynik_symulacji, plik_wyjsciowy):
   ani.save('gify/' + plik_wyjsciowy)
   print("Zapisywanie do gify/" + plik_wyjsciowy + " skonczone")
 
+# Funkcja pomocnicza do generowania grafu losowego w modelu Erdosa. Nie musisz wiedzieć co ona robi.
 def generuj_graf_erdos(plik_wyjsciowy="wejscie/erdos.csv", n=100, sredni_stopien=10):
   p = float(sredni_stopien)/n
   graf = nx.gnp_random_graph(n,p)
@@ -195,6 +256,7 @@ def generuj_graf_erdos(plik_wyjsciowy="wejscie/erdos.csv", n=100, sredni_stopien
   plt.savefig("wejscie/erdos_histogram.png")
   plt.clf()
 
+# Funkcja pomocnicza do generowania grafu bezskalowego w modelu Barabasiego. Nie musisz wiedzieć co ona robi.
 def generuj_graf_barabasi(plik_wyjsciowy="wejscie/barabasi.csv", n=100, sredni_stopien=10):
   m = sredni_stopien // 2
   graf = nx.barabasi_albert_graph(n, m)
@@ -210,6 +272,7 @@ def generuj_graf_barabasi(plik_wyjsciowy="wejscie/barabasi.csv", n=100, sredni_s
   plt.savefig("wejscie/barabasi_histogram.png")
   plt.clf()
 
+# Funkcja pomocnicza do generowania grafu typu 'mały świat' w modelu Wattsa-Strogatza. Nie musisz wiedzieć co ona robi.
 def generuj_graf_Watts_Strogatz(plik_wyjsciowy="wejscie/WattsStrogatz.csv", n=100, sredni_stopien=10, polaczenia_dalekie=0.1):
   graf = nx.watts_strogatz_graph(n, sredni_stopien, polaczenia_dalekie)
   while(not nx.is_connected(graf)):
@@ -224,6 +287,7 @@ def generuj_graf_Watts_Strogatz(plik_wyjsciowy="wejscie/WattsStrogatz.csv", n=10
   plt.savefig("wejscie/WattsStrogatz_histogram.png")
   plt.clf()
 
+# Funkcja pomocnicza do rysowania wykresu chorych. Nie musisz wiedzieć co ona robi.
 def rysuj_wykresy_chorych(nazwa, opis):
     plik = "wyjscie/" + nazwa + "_wynik.csv"
     dane = pd.read_csv(plik, delimiter=",")
